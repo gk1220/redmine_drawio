@@ -40,6 +40,18 @@ input[readonly].drawio {
     -moz-appearance:textfield; /* Firefox */
 }
 
+/* Fix SVG diagrams in Redmine 6.1 */
+div.mxgraph svg ul, div.mxgraph svg ol {
+    margin-bottom: 12px;
+    margin-top: 12px;
+}
+
+div.mxgraph svg li {
+    margin-bottom: 0px;
+    line-height: inherit;
+}
+/* End fix for Redmine 6.1 */
+
 /* Fix for tinymce buttongroup hidden after adding buttons */
 .mce-btn-group {
     left: auto !important;
