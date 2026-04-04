@@ -7,25 +7,19 @@ module RedmineDrawio
     class ViewLayoutsBaseBodyTop < Redmine::Hook::ViewListener
       def view_layouts_base_body_top(context = {})
         return unless User.current.admin? && !Setting.rest_api_enabled?
-
         context[:controller].send(:render_to_string, { partial: 'redmine_drawio/hooks/api_not_enabled_warning' })
       end
     end
 
     class ViewHooks < Redmine::Hook::ViewListener
-      # Adds a partial for configure a custom Drawio UI
       def view_my_account_preferences(context = {})
         context[:controller].send :render_to_string, { partial: 'redmine_drawio/hooks/view_my_account' }
       end
 
-      # This method will add the necessary CSS and JS scripts to the page header.
-      # The scripts are loaded before the 'jstoolbar-textile.min.js' is loaded so
-      # the toolbar cannot be patched.
-      # A second step is required: the textile_helper.rb inserts a small Javascript
-      # fragment after the jstoolbar-textile is loaded, which pathes the jsToolBar
-      # object.
       def view_layouts_base_html_head(context={})
-        # loading XML viewer library, only if necessary
+        # Pfad-Konstante für Redmine 6 / Propshaft Kompatibilität
+        base_path = "/plugin_assets/redmine_drawio"
+        
         header = <<-EOF
             <script type="text/javascript">//<![CDATA[
                 $(function() {
@@ -38,11 +32,12 @@ module RedmineDrawio
             //]]</script>
         EOF
 
-        header << stylesheet_link_tag("drawioEditor.css"  , :plugin => "redmine_drawio", :media => "screen")
+        # CSS Pfad korrigiert auf statischen Plugin-Pfad
+        header << "<link rel='stylesheet' media='screen' href='#{base_path}/stylesheets/redmine_drawio/drawioEditor.css' />"
         
         return header unless editable?(context)
 
-        # Change drawioUi to any other UI as needed (https://www.drawio.com/blog/diagram-editor-theme)
+        # Inline JS bleibt gleich, da es Variablen definiert
         inline = <<-EOF
             <script type=\"text/javascript\">//<![CDATA[
                 var Drawio = {
@@ -60,16 +55,34 @@ module RedmineDrawio
         EOF
 
         header << inline
-        header << javascript_include_tag("encoding-indexes.js", :plugin => "redmine_drawio")
-        header << javascript_include_tag("encoding.min.js", :plugin => "redmine_drawio")
-        header << javascript_include_tag("drawioEditor.js", :plugin => "redmine_drawio")
-        header << javascript_include_tag("lang/drawio_jstoolbar-en.js", :plugin => "redmine_drawio")
-        header << javascript_include_tag("lang/drawio_jstoolbar-#{current_language.to_s.downcase}.js", :plugin => "redmine_drawio") if lang_supported? current_language.to_s.downcase
-        header << javascript_include_tag("drawio_jstoolbar.js", :plugin => "redmine_drawio") unless ckeditor_enabled?
+        
+        # JS Includes auf direkte Pfade umgestellt, um Propshaft/Hashes zu umgehen
+        header << "<script src='#{base_path}/javascripts/redmine_drawio/encoding-indexes.js'></script>"
+        header << "<script src='#{base_path}/javascripts/redmine_drawio/encoding.min.js'></script>"
+        header << "<script src='#{base_path}/javascripts/redmine_drawio/drawioEditor.js'></script>"
+        header << "<script src='#{base_path}/javascripts/redmine_drawio/lang/drawio_jstoolbar-en.js'></script>"
+        
+        if lang_supported? current_language.to_s.downcase
+          header << "<script src='#{base_path}/javascripts/redmine_drawio/lang/drawio_jstoolbar-#{current_language.to_s.downcase}.js'></script>"
+        end
+
+        # WICHTIG: drawio_jstoolbar.js nur laden, wenn CKEditor NICHT aktiv ist (für Standard-Editor)
+        unless ckeditor_enabled?
+          header << "<script src='#{base_path}/javascripts/redmine_drawio/drawio_jstoolbar.js'></script>"
+        end
+        
         header
       end
 
       private
+
+      # Hilfsmethode zur Sprachprüfung angepasst auf neue Struktur
+      def lang_supported? lang
+        return false if lang == 'en'
+        # Pfadprüfung im Dateisystem (Container-Pfad)
+        path = File.join(Rails.root, "plugins/redmine_drawio/assets/javascripts/redmine_drawio/lang/drawio_jstoolbar-#{lang}.js")
+        File.exist?(path)
+      end
 
       def editable?(context)
         return false unless context[:controller]
@@ -84,13 +97,9 @@ module RedmineDrawio
         end
       end
 
-      # Returns the context path of Redmine installation (usually '/' or '/redmine/').
       def redmine_url
         rootUrl = ActionController::Base.relative_url_root
-
-        return rootUrl+'/' if rootUrl != nil
-
-        return '/'
+        rootUrl != nil ? rootUrl+'/' : '/'
       end
 
       def drawio_url
@@ -100,7 +109,6 @@ module RedmineDrawio
       def dmsf_enabled?(context)
         return false unless Redmine::Plugin.installed? :redmine_dmsf
         return false unless context[:project] && context[:project].module_enabled?('dmsf')
-
         true
       end
 
@@ -112,16 +120,9 @@ module RedmineDrawio
         Redmine::Plugin.installed?(:easy_redmine)
       end
 
-      def lang_supported? lang
-        return false if lang == 'en' # English is always loaded, avoid double load
-
-        File.exist? "#{File.expand_path('../../../../assets/javascripts/lang', __FILE__)}/drawio_jstoolbar-#{lang}.js"
-      end
-
       def hash_code
         return '' unless Setting.rest_api_enabled?
-
-        Base64.encode64(User.current.api_key).gsub(/\n/, '').reverse!
+        Base64.encode64(User.current.api_key).delete("\n").reverse!
       end
     end
   end

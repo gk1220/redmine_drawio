@@ -1,4 +1,4 @@
-CKEDITOR.plugins.add('drawio', {
+CKEDITOR.plugins.add( 'drawio', {
     init: function (editor) {
         function defineDialog(macroName, options) {
             CKEDITOR.dialog.add("dlg_" + macroName, function (editor) {
@@ -232,7 +232,8 @@ CKEDITOR.plugins.add('drawio', {
         defineDialog('drawio_attach', {
             dialogTitle: Drawio.strings['drawio_cke_attach_dlgtitle'],
             buttonLabel: Drawio.strings['drawio_cke_attach_btnlabel'],
-            buttonIcon: this.path + '/../../images/jstb_drawio_attach.png'
+            // ✅ Korrigiert für Redmine 6 / Propshaft: Pfad ist jetzt flach
+            buttonIcon: this.path + 'jstb_drawio_attach.png'
         });
 
         // If DMSF is enabled, define the drawio_dmsf dialog box.
@@ -240,7 +241,8 @@ CKEDITOR.plugins.add('drawio', {
             defineDialog('drawio_dmsf', {
                 dialogTitle: Drawio.strings['drawio_cke_dmsf_dlgtitle'],
                 buttonLabel: Drawio.strings['drawio_cke_dmsf_btnlabel'],
-                buttonIcon: this.path + '/../../images/jstb_drawio_dmsf.png'
+                // ✅ Korrigiert für Redmine 6 / Propshaft: Pfad ist jetzt flach
+                buttonIcon: this.path + 'jstb_drawio_dmsf.png'
             });
         }
 

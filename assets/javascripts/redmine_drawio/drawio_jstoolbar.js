@@ -169,7 +169,7 @@
         tinyMCE.on('AddEditor', function(evt){
             evt.editor.on('init', function() {
                 var editor = this;
-                var imgPath = Drawio.settings.redmineUrl+'plugin_assets/redmine_drawio/images';
+                var imgPath = Drawio.settings.redmineUrl+'assets/redmine_drawio';
                 var bg = editor.theme.panel.find('toolbar buttongroup')[2];  // group with links/images/code/...
 
                 editor.addButton('drawio_attach', {
