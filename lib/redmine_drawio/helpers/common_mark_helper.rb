@@ -13,7 +13,7 @@ if Redmine::VERSION::MAJOR >= 5
                         # that patches the jsToolBar adding the new buttons.
                         # After that, all editors in the page will get the new buttons.
                         content_for :header_tags do
-                            javascript_tag 'if(typeof(Drawio) !== "undefined") Drawio.initToolbar();'
+                            javascript_tag 'if(typeof(Drawio) !== "undefined" && typeof Drawio.initToolbar === "function") Drawio.initToolbar();'
                         end
                         @heads_for_wiki_formatter_with_drawio_included = true
                     end

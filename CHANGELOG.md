@@ -1,6 +1,66 @@
 # Changelog
 
 
+## v1.6.0 (2026-04-12)
+
+### Fix
+
+* Fixed CKEditor toolbar buttons not appearing on Wiki edit pages.
+
+  The plugin registration was missing completely because `init.rb` registered
+  a nested `Rails.configuration.to_prepare` callback inside Redmine's own
+  `PluginLoader#load` to_prepare block. Rails evaluates the callback list
+  before it starts executing, so newly added callbacks in a running cycle
+  are silently ignored (in production: never run; in development: only from
+  the second request onwards). The fix loads `after_init.rb` directly in
+  the `init.rb` body, which already executes inside PluginLoader's block.
+
+* Fixed CKEditor plugin not loading (drawio plugin registered too late).
+
+  Replaced broken `Object.defineProperty(window, 'CKEDITOR', { set: ... })`
+  strategy (which failed because CKEditor sets `window.CKEDITOR = {}` before
+  populating it) with a reliable `CKEDITOR.replace()` wrapper injected via
+  `content_for :header_tags` through a prepended `heads_for_wiki_formatter`
+  override. The wrapper runs after `ckeditor.js` is loaded but before the
+  inline body script calls `CKEDITOR.replace()`.
+
+* Fixed CDATA close tag (`//]]>`) in ViewHooks HTML head output.
+
+* Fixed `editable?` nil-safety for WikiController when project is nil.
+
+* Fixed `hash_code` stripping newlines from Base64 output.
+
+* Fixed DMSF icon path in `plugin.js` for Propshaft asset serving.
+
+### Changes
+
+* Migrated asset paths from Sprockets helpers to hardcoded `/plugin_assets/` URLs
+  for full Propshaft compatibility (Redmine 6 / Rails 7).
+
+* Reorganised assets into `redmine_drawio/` subdirectory for better namespacing.
+
+* Replaced `require_dependency` (removed in Rails 7) with plain `require`.
+
+* Added `Rails::Engine` definition for correct asset path discovery in Redmine 6.
+
+* Added `CkeditorHelper` module that prepends into `RedmineCkeditor::WikiFormatting::Helper`
+  to inject the drawio CKEditor plugin on every Wiki/Issue edit page.
+
+  The helper wraps `CKEDITOR.replace()` to inject `extraPlugins: 'drawio'` and
+  registers an `instanceCreated` listener to add the drawio toolbar group.
+  Guards (`_drawioReplaceWrapped`, `_drawioToolbarListenerRegistered`) prevent
+  double-registration when multiple textareas appear on one page.
+
+* Rewrote `drawioEditor.js` CKEditor fallback block; removed broken editorConfig
+  intercept approach.
+
+* Added subdirectory-aware `redmine_url` helper to ViewHooks (supports Redmine
+  installed in a sub-path).
+
+* Added `initToolbar` guard in `common_mark_helper.rb` and `textile_helper.rb`
+  to avoid JS errors when the toolbar function is not yet available.
+
+
 ## 1.5.3 (2025-12-23)
 
 ### Fix

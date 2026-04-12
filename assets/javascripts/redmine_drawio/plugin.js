@@ -232,17 +232,18 @@ CKEDITOR.plugins.add( 'drawio', {
         defineDialog('drawio_attach', {
             dialogTitle: Drawio.strings['drawio_cke_attach_dlgtitle'],
             buttonLabel: Drawio.strings['drawio_cke_attach_btnlabel'],
-            // ✅ Korrigiert für Redmine 6 / Propshaft: Pfad ist jetzt flach
+            // Icon is co-located with plugin.js in the javascripts folder
             buttonIcon: this.path + 'jstb_drawio_attach.png'
         });
 
         // If DMSF is enabled, define the drawio_dmsf dialog box.
         if (Drawio.settings.DMSF) {
+            // jstb_drawio_dmsf.png lives in the images folder; derive path from this.path
+            var dmsfIcon = this.path.replace('/javascripts/redmine_drawio/', '/images/redmine_drawio/') + 'jstb_drawio_dmsf.png';
             defineDialog('drawio_dmsf', {
                 dialogTitle: Drawio.strings['drawio_cke_dmsf_dlgtitle'],
                 buttonLabel: Drawio.strings['drawio_cke_dmsf_btnlabel'],
-                // ✅ Korrigiert für Redmine 6 / Propshaft: Pfad ist jetzt flach
-                buttonIcon: this.path + 'jstb_drawio_dmsf.png'
+                buttonIcon: dmsfIcon
             });
         }
 

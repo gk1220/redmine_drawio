@@ -738,99 +738,61 @@ window.onDrawioViewerLoad = function() {
 };
 
 // ======================================================================
-// CKEDITOR INTEGRATION (FIXED FOR REDMINE 6 & PROPSHAFT)
+// CKEDITOR INTEGRATION (fallback — primary path is ckeditor_helper.rb)
 // ======================================================================
+// drawioEditor.js loads in the <head> BEFORE CKEditor JS, so CKEDITOR is
+// not yet defined when this runs.  The reliable registration path is the
+// inline <script> that ckeditor_helper.rb generates via content_for
+// :header_tags — it runs after ckeditor.js (which super adds first) and
+// before the body CKEDITOR.replace() call.
+//
+// This block is a lightweight safety net for pages where drawioEditor.js
+// somehow loads AFTER CKEditor (e.g. dynamic inserts or re-renders).
+(function initDrawioCKEditorFallback() {
+  var drawioPath = '/plugin_assets/redmine_drawio/javascripts/redmine_drawio/';
 
-(function initDrawioCKEditorIntegration() {
+  function trySetup(ck) {
+    // Bail out if the primary path (ckeditor_helper.rb) already set up.
+    if (ck._drawioReplaceWrapped) { return; }
 
-  function register() {
-    // Sicherstellen, dass CKEDITOR geladen ist
-    if (!(window.CKEDITOR && CKEDITOR.plugins)) {
-      setTimeout(register, 100);
-      return;
-    }
+    if (ck.plugins.externals && ck.plugins.externals['drawio']) { return; }
+    ck.plugins.addExternal('drawio', drawioPath, 'plugin.js');
 
-    // Verhindert doppelte Registrierung, falls das Script mehrfach lädt
-    if (CKEDITOR.plugins.get('drawio')) {
-      return;
-    }
-
-    // In der Datei assets/javascripts/redmine_drawio/drawioEditor.js
-    var drawioPath = '/plugin_assets/redmine_drawio/javascripts/redmine_drawio/';
-    CKEDITOR.plugins.addExternal('drawio', drawioPath, 'plugin.js');
-
-    // ✅ 2. GLOBALER PFAD-HACK
-    // Dieser Teil fängt alle internen Anfragen des CKEditors ab und leitet sie
-    // von /plugin_assets/ auf /assets/ um. Das löst deinen 404-Fehler.
-    var orgGetPath = CKEDITOR.plugins.getPath;
-    CKEDITOR.plugins.getPath = function(name) {
-      if (name === 'drawio') {
-        return drawioPath;
+    ck._drawioReplaceWrapped = true;
+    var _orig = ck.replace;
+    ck.replace = function(element, config) {
+      config = config || {};
+      var extra = config.extraPlugins || '';
+      if (extra.indexOf('drawio') < 0) {
+        config.extraPlugins = extra ? (extra + ',drawio') : 'drawio';
       }
-      return orgGetPath.call(this, name);
+      return _orig.call(this, element, config);
     };
 
-    // ✅ 3. PATCH editorConfig (Damit die Buttons erscheinen)
-    if (typeof Object.getOwnPropertyDescriptor(CKEDITOR, 'editorConfig') === "undefined") {
-      var oldEditorConfig = CKEDITOR.editorConfig || null;
-
-      Object.defineProperty(CKEDITOR, 'editorConfig', {
-        get: function() { return oldEditorConfig; },
-        set: function(newValue) {
-          if (oldEditorConfig) {
-            var prevValue = oldEditorConfig;
-            oldEditorConfig = function(config) {
-              prevValue(config);
-              newValue(config);
-            };
-          } else {
-            oldEditorConfig = newValue;
+    if (!ck._drawioToolbarListenerRegistered) {
+      ck._drawioToolbarListenerRegistered = true;
+      ck.on('instanceCreated', function(evt) {
+        evt.editor.on('configLoaded', function() {
+          var toolbar = evt.editor.config.toolbar;
+          if (Array.isArray(toolbar)) {
+            var already = toolbar.some(function(g) { return g && g.name === 'drawio'; });
+            if (!already) {
+              toolbar.push({ name: 'drawio', items: ['btn_drawio_attach', 'btn_drawio_dmsf'] });
+            }
           }
-        }
+        });
       });
     }
-
-    CKEDITOR.editorConfig = function(config) {
-      // Plugins erweitern
-      if (typeof Object.getOwnPropertyDescriptor(config, 'extraPlugins') === "undefined") {
-        var _extraPlugins = config.extraPlugins || '';
-        Object.defineProperty(config, 'extraPlugins', {
-          get: function() { return _extraPlugins; },
-          set: function(newValue) {
-            if (_extraPlugins === '') _extraPlugins = newValue;
-            else _extraPlugins += ',' + newValue;
-          }
-        });
-      }
-
-      // Toolbar erweitern
-      if (typeof Object.getOwnPropertyDescriptor(config, 'toolbar') === "undefined") {
-        var _toolbar = config.toolbar || [];
-        Object.defineProperty(config, 'toolbar', {
-          get: function() {
-            return _toolbar.concat(config.extraToolbar || []);
-          },
-          set: function(newValue) {
-            _toolbar = newValue;
-          }
-        });
-      }
-
-      // Drawio Buttons definieren
-      var drawio_toolbar = [['btn_drawio_attach', 'btn_drawio_dmsf']];
-      config.extraPlugins = 'drawio';
-      config.extraToolbar = (config.extraToolbar || []).concat(drawio_toolbar);
-      console.log("Drawio: Config Patch angewendet!", config);
-    };
-    CKEDITOR.on('instanceReady', function(evt) {
-      console.log("Plugins geladen:", evt.editor.plugins);
-      if (!evt.editor.plugins.drawio) {
-        console.error("Drawio Plugin wurde vom CKEditor NICHT geladen!");
-      }
-    });
   }
 
-  // Startet die Registrierung
-  register();
-
+  // If CKEDITOR is already available when this script runs, apply now.
+  if (window.CKEDITOR && window.CKEDITOR.plugins) {
+    trySetup(window.CKEDITOR);
+  }
+  // Otherwise try again at DOMContentLoaded (late-loading pages).
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.CKEDITOR && window.CKEDITOR.plugins) {
+      trySetup(window.CKEDITOR);
+    }
+  });
 })();

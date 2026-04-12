@@ -17,9 +17,9 @@ module RedmineDrawio
       end
 
       def view_layouts_base_html_head(context={})
-        # Pfad-Konstante für Redmine 6 / Propshaft Kompatibilität
-        base_path = "/plugin_assets/redmine_drawio"
-        
+        # Use redmine_url so subdirectory installs work correctly.
+        base_path = "#{redmine_url}plugin_assets/redmine_drawio"
+
         header = <<-EOF
             <script type="text/javascript">//<![CDATA[
                 $(function() {
@@ -29,10 +29,9 @@ module RedmineDrawio
                         document.head.append(script);
                     }
                 });
-            //]]</script>
+            //]]></script>
         EOF
 
-        # CSS Pfad korrigiert auf statischen Plugin-Pfad
         header << "<link rel='stylesheet' media='screen' href='#{base_path}/stylesheets/redmine_drawio/drawioEditor.css' />"
         
         return header unless editable?(context)
@@ -86,7 +85,9 @@ module RedmineDrawio
 
       def editable?(context)
         return false unless context[:controller]
-        return true  if context[:controller].is_a?(WikiController) && User.current.allowed_to?(:edit_wiki_pages, context[:project])
+        if context[:controller].is_a?(WikiController)
+          return context[:project].present? && User.current.allowed_to?(:edit_wiki_pages, context[:project])
+        end
         return false unless context[:controller].is_a?(IssuesController)
 
         if context[:issue].nil?
@@ -122,7 +123,7 @@ module RedmineDrawio
 
       def hash_code
         return '' unless Setting.rest_api_enabled?
-        Base64.encode64(User.current.api_key).delete("\n").reverse!
+        Base64.encode64(User.current.api_key).gsub(/\n/, '').reverse!
       end
     end
   end

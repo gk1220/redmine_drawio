@@ -18,6 +18,8 @@ Before submit an issue please read carefully the `README.md` file (this page): m
 ## Requirements
 
 - Requires Redmine v2.6+. Tested with Redmine v3.1.4, v3.2.4, v3.3.3, v3.4.0, v4.0.4, v5.0.1, v5.1.4, v6.0.7, v6.1.0 as well as Easy Redmine 2016.05.07.
+- Redmine 6+ (Rails 7, Propshaft, Zeitwerk) is fully supported as of plugin version **1.6.0**.
+- Optional: [redmine_ckeditor] plugin for CKEditor integration.
 
 ## Installation
 
@@ -31,6 +33,39 @@ Before submit an issue please read carefully the `README.md` file (this page): m
 - for macro ``drawio_attach`` make sure to enable Rest API of Redmine
 - for macro ``drawio_dmsf`` make sure to install the [DMSF] plugin and to enable the module for the project
 - if you have troubles with the embedded editor using Internet Explorer, try a more recent version (Internet Explorer 11 should work fine) or, better, use another browser, such as Firefox or Chrome.
+
+### Installation with Docker (Redmine 6 / Propshaft)
+
+Redmine 6 uses **Propshaft** as the asset pipeline, which fingerprints all assets with a content hash at boot time. The plugin's JavaScript and image files must therefore be served from **unfingerprinted** paths (`/plugin_assets/...`) that Redmine copies to `public/plugin_assets/` on startup.
+
+In a Docker Compose setup the simplest way to ensure the assets are always up to date — especially during development — is to mount the plugin's `assets/` directory directly:
+
+```yaml
+services:
+  redmine:
+    image: redmine:6
+    volumes:
+      # Keep plugin assets in sync without a Propshaft rebuild step
+      - ./plugins/redmine_drawio/assets:/usr/src/redmine/public/plugin_assets/redmine_drawio
+```
+
+> **Why is this needed?**  
+> Propshaft writes fingerprinted copies of all assets to `public/assets/` and the unfingerprinted originals to `public/plugin_assets/`. The plugin references the unfingerprinted paths like `/plugin_assets/redmine_drawio/javascripts/redmine_drawio/plugin.js` directly from Ruby and JavaScript. The volume mount ensures these paths are always available and always reflect the current working copy.
+
+## Redmine 6 Compatibility (Rails 7 / Propshaft / Zeitwerk)
+
+Version **1.6.0** of this plugin is a full rewrite of the boot and asset-loading code to work correctly with Redmine 6:
+
+| Topic | Change |
+|---|---|
+| Asset pipeline | All asset paths use hardcoded `/plugin_assets/redmine_drawio/…` URLs — no Sprockets helpers |
+| Autoloader | Zeitwerk-compatible constant naming (`CkeditorHelper`, not `CKEditorHelper`) |
+| Plugin init | `after_init.rb` is loaded directly in `init.rb` (no nested `to_prepare`) |
+| CKEditor integration | `CkeditorHelper` is prepended into `RedmineCkeditor::WikiFormatting::Helper`; `CKEDITOR.replace()` is wrapped to inject the drawio plugin before CKEditor creates each editor instance |
+| Subdirectory support | `redmine_url` helper used throughout so the plugin works when Redmine is mounted at a sub-path |
+
+If you use the **redmine_ckeditor** plugin, the drawio toolbar buttons will appear automatically in both Wiki and Issue edit pages after upgrading to v2.0.0.
+
 
 ## Configuration
 
