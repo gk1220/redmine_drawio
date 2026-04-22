@@ -88,6 +88,9 @@ module RedmineDrawio
         if context[:controller].is_a?(WikiController)
           return context[:project].present? && User.current.allowed_to?(:edit_wiki_pages, context[:project])
         end
+        if context[:controller].is_a?(NewsController)
+          return context[:project].present? && User.current.allowed_to?(:manage_news, context[:project])
+        end
         return false unless context[:controller].is_a?(IssuesController)
 
         if context[:issue].nil?
