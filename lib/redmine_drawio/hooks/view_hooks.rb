@@ -97,6 +97,9 @@ module RedmineDrawio
            context[:controller].is_a?(MessagesController)
           return context[:project].present? && User.current.allowed_to?(:add_messages, context[:project])
         end
+        if context[:controller].is_a?(ProjectsController)
+          return context[:project].present? && User.current.allowed_to?(:edit_project, context[:project])
+        end
         return false unless context[:controller].is_a?(IssuesController)
 
         if context[:issue].nil?
