@@ -1,5 +1,9 @@
 CKEDITOR.plugins.add( 'drawio', {
     init: function (editor) {
+        // Drawio global is only injected when the page is editable (view_hooks.rb).
+        // On read-only pages the variable will be absent — exit gracefully.
+        if (typeof Drawio === 'undefined') { return; }
+
         function defineDialog(macroName, options) {
             CKEDITOR.dialog.add("dlg_" + macroName, function (editor) {
                 return {

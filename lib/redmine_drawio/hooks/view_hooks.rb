@@ -91,6 +91,12 @@ module RedmineDrawio
         if context[:controller].is_a?(NewsController)
           return context[:project].present? && User.current.allowed_to?(:manage_news, context[:project])
         end
+        # BoardsController#show embeds the new-message form; MessagesController
+        # handles the standalone new-topic and reply pages.
+        if context[:controller].is_a?(BoardsController) ||
+           context[:controller].is_a?(MessagesController)
+          return context[:project].present? && User.current.allowed_to?(:add_messages, context[:project])
+        end
         return false unless context[:controller].is_a?(IssuesController)
 
         if context[:issue].nil?
